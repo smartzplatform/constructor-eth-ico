@@ -1,0 +1,36 @@
+{
+  "name": "constructor-eth-ico",
+  "version": "1.0.0",
+  "description": "ico contract for smartz",
+  "scripts": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/smartzplatform/constructor-eth-ico"
+  },
+  "keywords": [
+    "smartz",
+    "ICO",
+    "solidity",
+    "ethereum",
+    "smart",
+    "contracts",
+    "security"
+  ],
+  "author": "Privezentsev",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "babel-polyfill": "^6.23.0",
+    "babel-preset-es2015": "^6.18.0",
+    "babel-preset-stage-2": "^6.18.0",
+    "babel-preset-stage-3": "^6.17.0",
+    "babel-register": "^6.23.0",
+    "ethereumjs-testrpc": "^4.1.1",
+    "mocha-lcov-reporter": "^1.3.0",
+    "solidity-coverage": "^0.2.2",
+    "truffle": "4.1.14",
+    "solc": "0.4.24",
+    "solhint": "1.1.10",
+    "zeppelin-solidity": "1.12.0",
+    "mixbytes-solidity": "0.1.5"
+  }
+}
