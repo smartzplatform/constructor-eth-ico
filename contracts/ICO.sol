@@ -7,11 +7,20 @@ import "zeppelin-solidity/contracts/crowdsale/validation/IndividuallyCappedCrowd
 import "zeppelin-solidity/contracts/crowdsale/validation/TimedCrowdsale.sol";
 import "zeppelin-solidity/contracts/crowdsale/validation/CappedCrowdsale.sol";
 import "zeppelin-solidity/contracts/crowdsale/distribution/FinalizableCrowdsale.sol";
+import "zeppelin-solidity/contracts/crowdsale/distribution/RefundableCrowdsale.sol";
 import "zeppelin-solidity/contracts/token/ERC20/BurnableToken.sol";
 import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
+import "zeppelin-solidity/contracts/payment/RefundEscrow.sol";
 
 
 contract CappedIco is CappedCrowdsale {
+        /**
+    * @dev Constructor, takes maximum amount of wei accepted in the crowdsale.
+    * @param _cap Max amount of wei to be contributed
+    */
+    constructor(uint256 _cap) public CappedCrowdsale(_cap) { 
+
+    }
     /**
     * @dev Extend parent behavior requiring purchase to respect the funding cap.
     * @param _beneficiary Token purchaser
@@ -21,12 +30,16 @@ contract CappedIco is CappedCrowdsale {
         address _beneficiary,
         uint256 _weiAmount
     ) internal {
-        super._preValidatePurchase(_beneficiary, _weiAmount);
+        require(weiRaised.add(_weiAmount) <= cap);
     }
 }
 
 
 contract TimedIco is TimedCrowdsale {
+    constructor(uint256 _openingTime, uint256 _closingTime) public TimedCrowdsale(_openingTime, _closingTime) {
+
+    }
+
     /**
     * @dev Extend parent behavior requiring to be within contributing period
     * @param _beneficiary Token purchaser
@@ -35,8 +48,8 @@ contract TimedIco is TimedCrowdsale {
     function timedPreValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount
-    ) internal {
-        super._preValidatePurchase(_beneficiary, _weiAmount);
+    ) internal onlyWhileOpen {
+      
     }
 
 }
@@ -52,7 +65,7 @@ contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
         address _beneficiary,
         uint256 _weiAmount
     ) internal {
-        super._preValidatePurchase(_beneficiary, _weiAmount);   
+        require(contributions[_beneficiary].add(_weiAmount) <= caps[_beneficiary]);
     }
 
     /**
@@ -60,11 +73,11 @@ contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
     * @param _beneficiary Token purchaser
     * @param _weiAmount Amount of wei contributed
     */
-    function  individuallyCappedUpdatePurchasingState(
+    function individuallyCappedUpdatePurchasingState(
         address _beneficiary,
         uint256 _weiAmount
     ) internal {
-        super._updatePurchasingState(_beneficiary, _weiAmount);   
+        contributions[_beneficiary] = contributions[_beneficiary].add(_weiAmount);
     }
 }
 
@@ -88,27 +101,42 @@ contract WhitelistedIco is WhitelistedCrowdsale {
     function whitelistedPreValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount
-    ) internal {
-        super._preValidatePurchase(_beneficiary, _weiAmount);
+    ) internal onlyIfWhitelisted(_beneficiary) {
     }
 }
 
 
 /// @title ICO
-contract ICO is WhitelistedIco, MintedIco, TimedIco, CappedIco, IndividuallyCappedIco, FinalizableCrowdsale {
+contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, FinalizableCrowdsale {
 
-    function ICO() public
-    Crowdsale(C_RATE, C_FUNDS, ERC20(C_TOKEN)) {}
+    constructor(uint _rate, address _funds, address _token, uint _softcap,
+        uint256 _openingTime,
+        uint256 _closingTime,
+        uint256 _cap) public
+        Crowdsale(_rate, _funds, ERC20(_token)) 
+        CappedIco(_cap)
+        TimedIco(_openingTime, _closingTime) {
+       
 
-    uint constant C_RATE = 1;
-    address constant C_FUNDS = 1;
-    address constant C_TOKEN = 1;
+        if (hasNextSale()) {
+            mEscrow = new RefundEscrow(this);
+        } else {
+            mEscrow = new RefundEscrow(_funds);
+        }
+        cSoftCap = _softcap;       
+
+    }
+
+    uint public cSoftCap;
+
+    RefundEscrow public mEscrow;
 
     function setNextSale(address sale) public onlyOwner {
         require(hasClosed(), "crowdsale has not been closed before setup next sale");
         // Could be called only once
         require(mNextSale == address(0), "Next sale must set once");
 
+    
         mNextSale = sale;
     }
 
@@ -116,9 +144,11 @@ contract ICO is WhitelistedIco, MintedIco, TimedIco, CappedIco, IndividuallyCapp
         address _beneficiary,
         uint256 _weiAmount)  internal {
         whitelistedPreValidatePurchase(_beneficiary, _weiAmount);
-        individuallyCappedPreValidatePurchase(_beneficiary, _weiAmount);
-        timedPreValidatePurchase(_beneficiary, _weiAmount);
+        individuallyCappedPreValidatePurchase(_beneficiary, _weiAmount); 
+        timedPreValidatePurchase(_beneficiary, _weiAmount); 
         cappedPreValidatePurchase(_beneficiary, _weiAmount);
+        
+
     }
 
     function _updatePurchasingState(
@@ -133,11 +163,12 @@ contract ICO is WhitelistedIco, MintedIco, TimedIco, CappedIco, IndividuallyCapp
         uint256 _tokenAmount
     ) internal {
         super._deliverTokens(_beneficiary, _tokenAmount);
-        mintedDeliverTokens(_beneficiary, _tokenAmount);
+        //mintedDeliverTokens(_beneficiary, _tokenAmount);
     }
 
     function finalization() internal {
         processRemainingTokens();
+        super.finalization();
     }
 
     function processRemainingTokens() internal {
@@ -149,14 +180,52 @@ contract ICO is WhitelistedIco, MintedIco, TimedIco, CappedIco, IndividuallyCapp
             assert(mNextSale != address(0));
 
             token.transfer(mNextSale, currentBalance);
+            mEscrow.close();
+            mEscrow.beneficiaryWithdraw();
         } else {
-            // Burn all remaining tokens
-            BurnableToken(address(token)).burn(currentBalance);            
-        }
+            if (goalReached()) {
+                if (withBurnableToken()) {
+                    BurnableToken(address(token)).burn(currentBalance);
+                }
+                mEscrow.close();
+                mEscrow.beneficiaryWithdraw();
+            } else {
+                mEscrow.enableRefunds();
+            }
+        }        
     }
 
     function hasNextSale() internal pure returns (bool) {
-        return true;
+        return false;
+    }
+
+    function withBurnableToken() internal pure returns (bool) {
+        return false;
+    }
+
+    /**
+    * @dev Investors can claim refunds here if crowdsale is unsuccessful
+    */
+    function claimRefund() public {
+        require(isFinalized);
+        require(!goalReached());
+
+        mEscrow.withdraw(msg.sender);
+    }
+
+    /**
+    * @dev Checks whether funding goal was reached.
+    * @return Whether funding goal was reached
+    */
+    function goalReached() public view returns (bool) {
+        return weiRaised >= cSoftCap;
+    }
+   
+  /**
+   * @dev Overrides Crowdsale fund forwarding, sending funds to escrow.
+   */
+    function _forwardFunds() internal {
+        mEscrow.deposit.value(msg.value)(msg.sender);
     }
 
     address mNextSale = address(0);

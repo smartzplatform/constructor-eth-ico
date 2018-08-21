@@ -1,0 +1,103 @@
+const { ether } = require('../helpers/ether');
+const { ethGetBalance } = require('../helpers/web3');
+const { latestTime } = require('../helpers/latestTime');
+const { increaseTimeTo, duration } = require('../helpers/increaseTime');
+
+const BigNumber = web3.BigNumber;
+
+const should = require('chai')
+  .use(require('chai-bignumber')(BigNumber))
+  .should();
+
+const Crowdsale = artifacts.require('ICO');
+const SimpleToken = artifacts.require('SimpleToken');
+
+contract('Crowdsale', function ([_, investor, wallet, purchaser, investorCheck]) {
+  const rate = new BigNumber(1);
+  const value = ether(42);
+  const tokenSupply = new BigNumber('1e22');
+  const expectedTokenAmount = rate.mul(value);
+  const cap = ether(10000);
+
+
+  beforeEach(async function () {
+    this.token = await SimpleToken.new();
+    this.openingTime = (await latestTime());
+    this.closingTime = this.openingTime + duration.weeks(1);
+  
+    this.crowdsale = await Crowdsale.new(rate, wallet, this.token.address, 0, this.openingTime, this.closingTime, cap);
+    await this.crowdsale.addAddressToWhitelist(web3.eth.accounts[0])
+    await this.crowdsale.addAddressToWhitelist(purchaser)
+    await this.crowdsale.addAddressToWhitelist(investor)
+    await this.crowdsale.addAddressToWhitelist(investorCheck)
+
+
+    await this.crowdsale.setUserCap(web3.eth.accounts[0], cap)
+    await this.crowdsale.setUserCap(purchaser, cap)
+    await this.crowdsale.setUserCap(investor, cap)
+    await this.crowdsale.setUserCap(investorCheck, cap)
+
+
+    await this.token.transfer(this.crowdsale.address, tokenSupply);
+  });
+
+  describe('accepting payments', function () {
+    it('should accept payments', async function () {
+      await this.crowdsale.send(value);
+      await this.crowdsale.buyTokens(investor, { value: value, from: purchaser });
+    });
+  });
+
+  describe('high-level purchase', function () {
+    it('should log purchase', async function () {
+      const { logs } = await this.crowdsale.sendTransaction({ value: value, from: investor });
+      const event = logs.find(e => e.event === 'TokenPurchase');
+      should.exist(event);
+      event.args.purchaser.should.equal(investor);
+      event.args.beneficiary.should.equal(investor);
+      event.args.value.should.be.bignumber.equal(value);
+      event.args.amount.should.be.bignumber.equal(expectedTokenAmount);
+    });
+
+    it('should assign tokens to sender', async function () {
+      await this.crowdsale.sendTransaction({ value: value, from: investor });
+      const balance = await this.token.balanceOf(investor);
+      balance.should.be.bignumber.equal(expectedTokenAmount);
+    });
+
+    it('should forward funds to wallet', async function () {
+      const escrowAddr = await this.crowdsale.mEscrow();
+      const pre = await ethGetBalance(escrowAddr);
+      await this.crowdsale.sendTransaction({ value, from: investor });
+      const post = await ethGetBalance(escrowAddr);
+      post.minus(pre).should.be.bignumber.equal(value);
+    });
+  });
+
+  describe('low-level purchase', function () {
+    it('should log purchase', async function () {
+      const { logs } = await this.crowdsale.buyTokens(investor, { value: value, from: purchaser });
+      const event = logs.find(e => e.event === 'TokenPurchase');
+      should.exist(event);
+      event.args.purchaser.should.equal(purchaser);
+      event.args.beneficiary.should.equal(investor);
+      event.args.value.should.be.bignumber.equal(value);
+      event.args.amount.should.be.bignumber.equal(expectedTokenAmount);
+    });
+
+    it('should assign tokens to beneficiary', async function () {
+      await this.crowdsale.buyTokens(investor, { value, from: purchaser });
+      const balance = await this.token.balanceOf(investor);
+      balance.should.be.bignumber.equal(expectedTokenAmount);
+    });
+
+    it('should forward funds to wallet', async function () {
+      const escrowAddr = await this.crowdsale.mEscrow();
+      const pre = await ethGetBalance(escrowAddr);
+      await this.crowdsale.buyTokens(investor, { value, from: purchaser });
+      const post = await ethGetBalance(escrowAddr);
+   
+      post.minus(pre).should.be.bignumber.equal(value);
+    });
+  });
+});
