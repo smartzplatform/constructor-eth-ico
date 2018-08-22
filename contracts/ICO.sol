@@ -82,21 +82,6 @@ contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
 }
 
 
-contract MintedIco is MintedCrowdsale {
-    /**
-    * @dev Overrides delivery by minting tokens upon purchase.
-    * @param _beneficiary Token purchaser
-    * @param _tokenAmount Number of tokens to be minted
-    */
-    function mintedDeliverTokens(
-        address _beneficiary,
-        uint256 _tokenAmount
-    ) internal {
-        super._deliverTokens(_beneficiary, _tokenAmount);
-    }
-}
-
-
 contract WhitelistedIco is WhitelistedCrowdsale {
     function whitelistedPreValidatePurchase(
         address _beneficiary,
@@ -116,6 +101,7 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         Crowdsale(_rate, _funds, ERC20(_token)) 
         CappedIco(_cap)
         TimedIco(_openingTime, _closingTime) {
+        require(_softcap > 0);
        
 
         if (hasNextSale()) {
@@ -132,7 +118,6 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
     RefundEscrow public mEscrow;
 
     function setNextSale(address sale) public onlyOwner {
-        require(hasClosed(), "crowdsale has not been closed before setup next sale");
         // Could be called only once
         require(mNextSale == address(0), "Next sale must set once");
 
@@ -156,15 +141,7 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         uint256 _weiAmount
     ) internal {
         individuallyCappedUpdatePurchasingState(_beneficiary, _weiAmount);      
-    }
-
-    function _deliverTokens(  
-        address _beneficiary,
-        uint256 _tokenAmount
-    ) internal {
-        super._deliverTokens(_beneficiary, _tokenAmount);
-        //mintedDeliverTokens(_beneficiary, _tokenAmount);
-    }
+    } 
 
     function finalization() internal {
         processRemainingTokens();
@@ -228,7 +205,28 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         mEscrow.deposit.value(msg.value)(msg.sender);
     }
 
-    address mNextSale = address(0);
+    address private mNextSale = address(0);
 
+}
+
+
+contract MintedIco is ICO {
+    constructor(uint _rate, address _funds, address _token, uint _softcap,
+        uint256 _openingTime,
+        uint256 _closingTime,
+        uint256 _cap) public ICO(_rate, _funds, _token, _softcap, _openingTime, _closingTime, _cap) {
+
+    }
+    /**
+    * @dev Overrides delivery by minting tokens upon purchase.
+    * @param _beneficiary Token purchaser
+    * @param _tokenAmount Number of tokens to be minted
+    */   
+    function _deliverTokens(  
+        address _beneficiary,
+        uint256 _tokenAmount
+    ) internal {
+        require(MintableToken(address(token)).mint(_beneficiary, _tokenAmount));
+    }
 }
     

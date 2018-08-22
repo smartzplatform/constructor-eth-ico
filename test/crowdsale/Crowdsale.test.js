@@ -25,18 +25,9 @@ contract('Crowdsale', function ([_, investor, wallet, purchaser, investorCheck])
     this.openingTime = (await latestTime());
     this.closingTime = this.openingTime + duration.weeks(1);
   
-    this.crowdsale = await Crowdsale.new(rate, wallet, this.token.address, 0, this.openingTime, this.closingTime, cap);
-    await this.crowdsale.addAddressToWhitelist(web3.eth.accounts[0])
-    await this.crowdsale.addAddressToWhitelist(purchaser)
-    await this.crowdsale.addAddressToWhitelist(investor)
-    await this.crowdsale.addAddressToWhitelist(investorCheck)
-
-
-    await this.crowdsale.setUserCap(web3.eth.accounts[0], cap)
-    await this.crowdsale.setUserCap(purchaser, cap)
-    await this.crowdsale.setUserCap(investor, cap)
-    await this.crowdsale.setUserCap(investorCheck, cap)
-
+    this.crowdsale = await Crowdsale.new(rate, wallet, this.token.address, 1, this.openingTime, this.closingTime, cap);
+    await this.crowdsale.addAddressesToWhitelist([web3.eth.accounts[0], purchaser, investor, investorCheck])
+    await this.crowdsale.setGroupCap([web3.eth.accounts[0], purchaser, investor, investorCheck], cap)
 
     await this.token.transfer(this.crowdsale.address, tokenSupply);
   });

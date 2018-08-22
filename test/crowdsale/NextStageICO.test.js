@@ -15,9 +15,11 @@ const should = require('chai')
 const FinalizableCrowdsale = artifacts.require('ICO');
 const MintableToken = artifacts.require('MintableToken');
 
-contract('FinalizableCrowdsale', function ([_, owner, wallet, thirdparty]) {
-  const rate = new BigNumber(1000);
+contract('NextStageICO', function ([_, owner, wallet, thirdparty, investor]) {
+  const rate = 1;
   const cap = ether(10000);
+  const value = ether(42);
+
 
 
   before(async function () {
@@ -26,7 +28,7 @@ contract('FinalizableCrowdsale', function ([_, owner, wallet, thirdparty]) {
   });
 
   beforeEach(async function () {
-    this.openingTime = (await latestTime()) + duration.weeks(1);
+    this.openingTime = (await latestTime());
     this.closingTime = this.openingTime + duration.weeks(1);
     this.afterClosingTime = this.closingTime + duration.seconds(1);
 
@@ -38,47 +40,28 @@ contract('FinalizableCrowdsale', function ([_, owner, wallet, thirdparty]) {
     await this.crowdsale.addAddressToWhitelist(owner,{ from: owner })
     await this.crowdsale.addAddressToWhitelist(wallet,{ from: owner })
     await this.crowdsale.addAddressToWhitelist(thirdparty, { from: owner })
+    await this.crowdsale.addAddressToWhitelist(investor, { from: owner })
 
 
     await this.crowdsale.setUserCap(web3.eth.accounts[0], cap,{ from: owner })
     await this.crowdsale.setUserCap(owner, cap, { from: owner })
     await this.crowdsale.setUserCap(wallet, cap, { from: owner })
     await this.crowdsale.setUserCap(thirdparty, cap, { from: owner })
+    await this.crowdsale.setUserCap(investor, cap, { from: owner })
 
 
     await this.token.transferOwnership(this.crowdsale.address);
 
+
   });
 
-  it('cannot be finalized before ending', async function () {
-    await expectThrow(this.crowdsale.finalize({ from: owner }), EVMRevert);
-  });
-
-  it('cannot be finalized by third party after ending', async function () {
-    await increaseTimeTo(this.afterClosingTime);
-    await expectThrow(this.crowdsale.finalize({ from: thirdparty }), EVMRevert);
-  });
-
-  it('can be finalized by owner after ending', async function () {
+  it('move to next stage', async function () {
+  //  console.log(await this.crowdsale.hasClosed())
+    /* await this.crowdsale.sendTransaction({ value: value, from: investor });
     await increaseTimeTo(this.afterClosingTime);    
     await this.crowdsale.finalize({ from: owner });
+    await this.crowdsale.setNextSale(thirdparty, {from: owner}) */
+   // console.log(await this.token.getBalance(thirdparty));
   });
 
-  it('can be finalized by owner after ending', async function () {
-    await increaseTimeTo(this.afterClosingTime);    
-    await this.crowdsale.finalize({ from: owner });
-  });
-
-  it('cannot be finalized twice', async function () {
-    await increaseTimeTo(this.afterClosingTime);
-    await this.crowdsale.finalize({ from: owner });
-    await expectThrow(this.crowdsale.finalize({ from: owner }), EVMRevert);
-  });
-
-  it('logs finalized', async function () {
-    await increaseTimeTo(this.afterClosingTime);
-    const { logs } = await this.crowdsale.finalize({ from: owner });
-    const event = logs.find(e => e.event === 'Finalized');
-    should.exist(event);
-  });
 });

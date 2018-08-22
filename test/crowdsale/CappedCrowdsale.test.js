@@ -25,7 +25,7 @@ contract('CappedCrowdsale', function ([_, wallet]) {
     this.openingTime = (await latestTime());
     this.closingTime = this.openingTime + duration.weeks(1);
   
-    this.crowdsale = await CappedCrowdsale.new(rate, wallet, this.token.address, 0, this.openingTime, this.closingTime, cap);
+    this.crowdsale = await CappedCrowdsale.new(rate, wallet, this.token.address, 1, this.openingTime, this.closingTime, cap);
     await this.crowdsale.addAddressToWhitelist(web3.eth.accounts[0])
     await this.crowdsale.setUserCap(web3.eth.accounts[0], cap)
     await this.token.transfer(this.crowdsale.address, tokenSupply);
