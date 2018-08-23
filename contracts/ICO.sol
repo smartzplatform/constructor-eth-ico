@@ -101,29 +101,20 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         Crowdsale(_rate, _funds, ERC20(_token)) 
         CappedIco(_cap)
         TimedIco(_openingTime, _closingTime) {
-        require(_softcap > 0);
-       
+        require(_softcap > 0);      
 
-        if (hasNextSale()) {
-            mEscrow = new RefundEscrow(this);
-        } else {
-            mEscrow = new RefundEscrow(_funds);
-        }
-        cSoftCap = _softcap;       
+    
+        mEscrow = new RefundEscrow(_funds);
+        
+        cSoftCap = _softcap;          
 
     }
 
     uint public cSoftCap;
 
     RefundEscrow public mEscrow;
+    address public cFunds;
 
-    function setNextSale(address sale) public onlyOwner {
-        // Could be called only once
-        require(mNextSale == address(0), "Next sale must set once");
-
-    
-        mNextSale = sale;
-    }
 
     function _preValidatePurchase(
         address _beneficiary,
@@ -132,8 +123,6 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         individuallyCappedPreValidatePurchase(_beneficiary, _weiAmount); 
         timedPreValidatePurchase(_beneficiary, _weiAmount); 
         cappedPreValidatePurchase(_beneficiary, _weiAmount);
-        
-
     }
 
     function _updatePurchasingState(
@@ -150,34 +139,26 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
 
     function processRemainingTokens() internal {
         uint currentBalance = token.balanceOf(address(this));
-        if (0 == currentBalance)
-            return;
+        if (currentBalance != 0) {
+           
+            if (needBurn()) {
+                BurnableToken(address(token)).burn(currentBalance);
+            } else {
+                token.transfer(mEscrow.beneficiary(), currentBalance);           
+            }  
+        } 
 
-        if (hasNextSale()) {
-            assert(mNextSale != address(0));
-
-            token.transfer(mNextSale, currentBalance);
+        if (goalReached()) {           
+            
             mEscrow.close();
             mEscrow.beneficiaryWithdraw();
         } else {
-            if (goalReached()) {
-                if (withBurnableToken()) {
-                    BurnableToken(address(token)).burn(currentBalance);
-                }
-                mEscrow.close();
-                mEscrow.beneficiaryWithdraw();
-            } else {
-                mEscrow.enableRefunds();
-            }
-        }        
-    }
+            mEscrow.enableRefunds();
+        }               
+    }  
 
-    function hasNextSale() internal pure returns (bool) {
-        return false;
-    }
-
-    function withBurnableToken() internal pure returns (bool) {
-        return false;
+    function needBurn() internal pure returns (bool) {
+        return  false;
     }
 
     /**
@@ -204,9 +185,6 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
     function _forwardFunds() internal {
         mEscrow.deposit.value(msg.value)(msg.sender);
     }
-
-    address private mNextSale = address(0);
-
 }
 
 

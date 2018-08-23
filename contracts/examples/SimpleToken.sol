@@ -2,7 +2,7 @@ pragma solidity ^0.4.24;
 
 
 import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
-
+import "zeppelin-solidity/contracts/token/ERC20/StandardBurnableToken.sol";
 
     /**
     * @title SimpleToken
@@ -10,7 +10,7 @@ import "zeppelin-solidity/contracts/token/ERC20/StandardToken.sol";
     * Note they can later distribute these tokens as they wish using `transfer` and other
     * `StandardToken` functions.
     */
-contract SimpleToken is StandardToken {
+contract SimpleToken is StandardBurnableToken {
 
     string public constant name = "SimpleToken";
     string public constant symbol = "SIM";

@@ -2,6 +2,8 @@ const { ether } = require('../helpers/ether');
 const { ethGetBalance } = require('../helpers/web3');
 const { latestTime } = require('../helpers/latestTime');
 const { increaseTimeTo, duration } = require('../helpers/increaseTime');
+const { advanceBlock } = require('../helpers/advanceToBlock');
+
 
 const BigNumber = web3.BigNumber;
 
@@ -19,8 +21,8 @@ contract('Crowdsale', function ([_, investor, wallet, purchaser, investorCheck])
   const expectedTokenAmount = rate.mul(value);
   const cap = ether(10000);
 
-
   beforeEach(async function () {
+    await advanceBlock();
     this.token = await SimpleToken.new();
     this.openingTime = (await latestTime());
     this.closingTime = this.openingTime + duration.weeks(1);

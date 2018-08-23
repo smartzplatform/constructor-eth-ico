@@ -3,6 +3,8 @@ const { expectThrow } = require('../helpers/expectThrow');
 const { EVMRevert } = require('../helpers/EVMRevert');
 const { latestTime } = require('../helpers/latestTime');
 const { increaseTimeTo, duration } = require('../helpers/increaseTime');
+const { advanceBlock } = require('../helpers/advanceToBlock');
+
 
 
 const BigNumber = web3.BigNumber;
@@ -20,7 +22,10 @@ contract('CappedCrowdsale', function ([_, wallet]) {
   const lessThanCap = ether(60);
   const tokenSupply = new BigNumber('1e22');
 
+
   beforeEach(async function () {
+    await advanceBlock();
+
     this.token = await SimpleToken.new();
     this.openingTime = (await latestTime());
     this.closingTime = this.openingTime + duration.weeks(1);

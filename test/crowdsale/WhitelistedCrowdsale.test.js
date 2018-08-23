@@ -2,6 +2,8 @@ const { ether } = require('../helpers/ether');
 const { expectThrow } = require('../helpers/expectThrow');
 const { increaseTimeTo, duration } = require('../helpers/increaseTime');
 const { latestTime } = require('../helpers/latestTime');
+const { advanceBlock } = require('../helpers/advanceToBlock');
+
 
 const BigNumber = web3.BigNumber;
 
@@ -17,9 +19,10 @@ contract('WhitelistedCrowdsale', function ([_, wallet, authorized, unauthorized,
   const tokenSupply = new BigNumber('1e22');
   const cap = ether(10000);
 
-
   describe('single user whitelisting', function () {
+
     beforeEach(async function () {
+      await advanceBlock();
       this.token = await SimpleToken.new();
       this.openingTime = (await latestTime());
       this.closingTime = this.openingTime + duration.weeks(1);
@@ -60,7 +63,10 @@ contract('WhitelistedCrowdsale', function ([_, wallet, authorized, unauthorized,
   });
 
   describe('many user whitelisting', function () {
+
+ 
     beforeEach(async function () {
+      await advanceBlock();
       this.token = await SimpleToken.new();
       this.openingTime = (await latestTime());
       this.closingTime = this.openingTime + duration.weeks(1);

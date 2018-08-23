@@ -23,12 +23,9 @@ contract('RefundableCrowdsale', function ([_, owner, wallet, investor, purchaser
   const cap = ether(10000);
 
 
-  before(async function () {
-    // Advance to the next block to correctly read time in the solidity "now" function interpreted by ganache
-    await advanceBlock();
-  });
 
   beforeEach(async function () {
+    await advanceBlock();
     this.openingTime = (await latestTime()) + duration.weeks(1);
     this.closingTime = this.openingTime + duration.weeks(1);
     this.afterClosingTime = this.closingTime + duration.seconds(1);

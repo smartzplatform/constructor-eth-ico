@@ -1,8 +1,9 @@
 const { shouldBehaveLikeMintedCrowdsale } = require('./MintedCrowdsale.behaviour');
 const { ether } = require('../helpers/ether');
 const { advanceBlock } = require('../helpers/advanceToBlock');
-const { increaseTimeTo, duration } = require('../helpers/increaseTime');
+const { duration } = require('../helpers/increaseTime');
 const { latestTime } = require('../helpers/latestTime');
+
 
 const BigNumber = web3.BigNumber;
 
@@ -17,6 +18,7 @@ contract('MintedCrowdsale', function ([_, investor, wallet, purchaser]) {
 
   describe('using MintableToken', function () {
     beforeEach(async function () {
+      await advanceBlock();
       this.token = await MintableToken.new();
       this.openingTime = (await latestTime());
       this.closingTime = this.openingTime + duration.weeks(1);
