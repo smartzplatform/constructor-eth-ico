@@ -11,14 +11,14 @@ cache:
 
 jobs:
   include:
-    # Run the unit test suite three times in parallel.
-    # The first one gets results faster and is the only one required to pass.
-    # The second one generates the coverage report.
-    # The third one is to keep us informed about possible issues with the
-    # upcoming solidity release.
+
     - stage: tests
       name: "unit tests"
       script: make test
+
+    - stage: clean
+      name: "clean"
+      script: make clean
    
 
 

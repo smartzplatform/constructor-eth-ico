@@ -8,4 +8,7 @@ ganache.pid:
 	sleep 2
 
 test: ganache.pid
-	./node_modules/.bin/truffle test || kill -9 `cat $<` && rm $<
+	./node_modules/.bin/truffle test
+
+clean: ganache.pid
+	kill -9 `cat $<` && rm $<
