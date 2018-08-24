@@ -1,8 +1,8 @@
-const { ether } = require('../helpers/ether');
-const { expectThrow } = require('../helpers/expectThrow');
-const { increaseTimeTo, duration } = require('../helpers/increaseTime');
-const { latestTime } = require('../helpers/latestTime');
-const { advanceBlock } = require('../helpers/advanceToBlock');
+const { ether } = require('../../node_modules/zeppelin-solidity/test/helpers/ether');
+const { expectThrow } = require('../../node_modules/zeppelin-solidity/test/helpers/expectThrow');
+const { increaseTimeTo, duration } = require('../../node_modules/zeppelin-solidity/test/helpers/increaseTime');
+const { latestTime } = require('../../node_modules/zeppelin-solidity/test/helpers/latestTime');
+const { advanceBlock } = require('../../node_modules/zeppelin-solidity/test/helpers/advanceToBlock');
 
 
 const BigNumber = web3.BigNumber;

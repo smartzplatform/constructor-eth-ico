@@ -1,4 +1,4 @@
-const { ethGetBalance } = require('../helpers/web3');
+const { ethGetBalance } = require('../../node_modules/zeppelin-solidity/test/helpers/web3');
 
 const BigNumber = web3.BigNumber;
 

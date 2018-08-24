@@ -1,8 +1,8 @@
 const { shouldBehaveLikeMintedCrowdsale } = require('./MintedCrowdsale.behaviour');
-const { ether } = require('../helpers/ether');
-const { advanceBlock } = require('../helpers/advanceToBlock');
-const { duration } = require('../helpers/increaseTime');
-const { latestTime } = require('../helpers/latestTime');
+const { ether } = require('../../node_modules/zeppelin-solidity/test/helpers/ether');
+const { advanceBlock } = require('../../node_modules/zeppelin-solidity/test/helpers/advanceToBlock');
+const { duration } = require('../../node_modules/zeppelin-solidity/test/helpers/increaseTime');
+const { latestTime } = require('../../node_modules/zeppelin-solidity/test/helpers/latestTime');
 
 
 const BigNumber = web3.BigNumber;
