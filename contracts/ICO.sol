@@ -14,13 +14,14 @@ import "zeppelin-solidity/contracts/payment/RefundEscrow.sol";
 
 
 contract CappedIco is CappedCrowdsale {
-        /**
+    /**
     * @dev Constructor, takes maximum amount of wei accepted in the crowdsale.
     * @param _cap Max amount of wei to be contributed
     */
     constructor(uint256 _cap) public CappedCrowdsale(_cap) { 
 
     }
+
     /**
     * @dev Extend parent behavior requiring purchase to respect the funding cap.
     * @param _beneficiary Token purchaser
@@ -29,7 +30,7 @@ contract CappedIco is CappedCrowdsale {
     function cappedPreValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount
-    ) internal {
+    ) view internal {
         require(weiRaised.add(_weiAmount) <= cap);
     }
 }
@@ -48,7 +49,7 @@ contract TimedIco is TimedCrowdsale {
     function timedPreValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount
-    ) internal onlyWhileOpen {
+    ) view internal onlyWhileOpen {
       
     }
 
@@ -56,6 +57,7 @@ contract TimedIco is TimedCrowdsale {
 
 
 contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
+
     /**
     * @dev Extend parent behavior requiring purchase to respect the user's funding cap.
     * @param _beneficiary Token purchaser
@@ -64,7 +66,7 @@ contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
     function individuallyCappedPreValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount
-    ) internal {
+    ) view internal {        
         require(contributions[_beneficiary].add(_weiAmount) <= caps[_beneficiary]);
     }
 
@@ -86,7 +88,7 @@ contract WhitelistedIco is WhitelistedCrowdsale {
     function whitelistedPreValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount
-    ) internal onlyIfWhitelisted(_beneficiary) {
+    ) view internal onlyIfWhitelisted(_beneficiary) {
     }
 }
 
@@ -115,6 +117,8 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
     RefundEscrow public mEscrow;
     address public cFunds;
 
+    uint constant  MIN_CONTRIBUTION = 0;
+
 
     function _preValidatePurchase(
         address _beneficiary,
@@ -123,6 +127,7 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         individuallyCappedPreValidatePurchase(_beneficiary, _weiAmount); 
         timedPreValidatePurchase(_beneficiary, _weiAmount); 
         cappedPreValidatePurchase(_beneficiary, _weiAmount);
+        minContributionPreValidatePurchase(_beneficiary, _weiAmount);
     }
 
     function _updatePurchasingState(
@@ -135,6 +140,13 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
     function finalization() internal {
         processRemainingTokens();
         super.finalization();
+    }
+
+    function minContributionPreValidatePurchase(
+        address _beneficiary,
+        uint256 _weiAmount
+    ) pure internal {
+        require(_weiAmount >= MIN_CONTRIBUTION);
     }
 
     function processRemainingTokens() internal {
@@ -195,6 +207,7 @@ contract MintedIco is ICO {
         uint256 _cap) public ICO(_rate, _funds, _token, _softcap, _openingTime, _closingTime, _cap) {
 
     }
+    
     /**
     * @dev Overrides delivery by minting tokens upon purchase.
     * @param _beneficiary Token purchaser
