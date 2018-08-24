@@ -1,4 +1,4 @@
-.PHONY: ganache.pid
+.PHONY: ganache.pid flatten_contract
 
 node_modules:
 	npm install
@@ -9,6 +9,14 @@ ganache.pid: node_modules
 
 test: node_modules ganache.pid
 	./node_modules/.bin/truffle test
+
+flatten_contract:
+	./node_modules/.bin/truffle-flattener contracts/ICO.sol > smartz/flattened_contract.sol
+
+build_contract:
+	python smartz/gen.py > smartz/.final_constructor.py
+	node_modules/smartz-sdk/bin/run-constructor.py construct --fields-json {} smartz/.final_constructor.py  > out.sol
+	node_modules/.bin/solcjs -o bin/contracts  --abi  out.sol
 
 clean: ganache.pid
 	kill -9 `cat $<` && rm $<

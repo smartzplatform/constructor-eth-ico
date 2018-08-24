@@ -64,3 +64,5 @@ build
 bin
 .idea
 .vscode
+smartz/.final*
+smartz/final*
