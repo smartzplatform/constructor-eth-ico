@@ -550,6 +550,8 @@ contract RBAC {
   // }
 }
 
+{{ _if(is_whitelisted, """ 
+
 // File: zeppelin-solidity/contracts/access/Whitelist.sol
 
 /**
@@ -636,6 +638,9 @@ contract Whitelist is Ownable, RBAC {
   }
 
 }
+""")}}
+
+{{ _if(is_whitelisted, """ 
 
 // File: zeppelin-solidity/contracts/crowdsale/validation/WhitelistedCrowdsale.sol
 
@@ -660,6 +665,8 @@ contract WhitelistedCrowdsale is Whitelist, Crowdsale {
   }
 
 }
+
+""") }}
 
 // File: zeppelin-solidity/contracts/token/ERC20/BasicToken.sol
 
@@ -828,6 +835,7 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
+{{ _if(is_minted_token, """ 
 // File: zeppelin-solidity/contracts/token/ERC20/MintableToken.sol
 
 /**
@@ -884,6 +892,8 @@ contract MintableToken is StandardToken, Ownable {
     return true;
   }
 }
+
+""")}}
 
 // File: zeppelin-solidity/contracts/crowdsale/emission/MintedCrowdsale.sol
 
@@ -1380,103 +1390,26 @@ contract BurnableToken is BasicToken {
   }
 }
 
-// File: contracts/ICO.sol
-
-contract CappedIco is CappedCrowdsale {
-    /**
-    * @dev Constructor, takes maximum amount of wei accepted in the crowdsale.
-    * @param _cap Max amount of wei to be contributed
-    */
-    constructor(uint256 _cap) public CappedCrowdsale(_cap) { 
-
-    }
-
-    /**
-    * @dev Extend parent behavior requiring purchase to respect the funding cap.
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function cappedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal {
-        require(weiRaised.add(_weiAmount) <= cap);
-    }
-}
 
 
-contract TimedIco is TimedCrowdsale {
-    constructor(uint256 _openingTime, uint256 _closingTime) public TimedCrowdsale(_openingTime, _closingTime) {
-
-    }
-
-    /**
-    * @dev Extend parent behavior requiring to be within contributing period
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function timedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal onlyWhileOpen {
-      
-    }
-
-}
-
-
-contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
-
-    /**
-    * @dev Extend parent behavior requiring purchase to respect the user's funding cap.
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function individuallyCappedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal {        
-        require(contributions[_beneficiary].add(_weiAmount) <= caps[_beneficiary]);
-    }
-
-    /**
-    * @dev Extend parent behavior to update user contributions
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function individuallyCappedUpdatePurchasingState(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) internal {
-        contributions[_beneficiary] = contributions[_beneficiary].add(_weiAmount);
-    }
-}
-
-
-contract WhitelistedIco is WhitelistedCrowdsale {
-    function whitelistedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal onlyIfWhitelisted(_beneficiary) {
-    }
-}
 
 
 /// @title ICO
-contract ICO is TimedIco, 
-                {{ _if(is_whitelisted, "WhitelistedIco, ") }}
-                {{ _if(cap, "CappedIco, ")}}
-                {{ _if(has_cap_per_person, "IndividuallyCappedIco, ") }}
+contract ICO is TimedCrowdsale, 
+                {{ _if(is_whitelisted, "WhitelistedCrowdsale, ") }}
+                {{ _if(cap, "CappedCrowdsale, ")}}
+                {{ _if(has_cap_per_person, "IndividuallyCappedCrowdsale, ") }}
                 FinalizableCrowdsale {
 
     constructor() public
         Crowdsale({{ rate }}, {{ wallet }}, ERC20({{ token }})) 
-        {{ _if(cap, "CappedIco(" + str(cap) + ")") }}
-        TimedIco({{ start }}, {{ end }} ) {
+        {{ _if(cap, "CappedCrowdsale(" + str(cap) + ")") }}
+        TimedCrowdsale({{ start }}, {{ end }} ) {
         require({{ softcap }} > 0);      
-
     
         mEscrow = new RefundEscrow({{ wallet }});      
+
+        %payment_code%
 
     }
 
@@ -1490,11 +1423,8 @@ contract ICO is TimedIco,
     function _preValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount)  internal {
-        {{ _if(is_whitelisted, "whitelistedPreValidatePurchase(_beneficiary, _weiAmount);") }}
-        {{ _if(has_cap_per_person, "individuallyCappedPreValidatePurchase(_beneficiary, _weiAmount);") }} 
-        {{ _if(cap, "cappedPreValidatePurchase(_beneficiary, _weiAmount);") }}
-        {{ _if(min_contribution, "minContributionPreValidatePurchase(_beneficiary, _weiAmount);") }}
-        timedPreValidatePurchase(_beneficiary, _weiAmount); 
+        super._preValidatePurchase(_beneficiary, _weiAmount);        
+        {{ _if(min_contribution, "minContributionPreValidatePurchase(_beneficiary, _weiAmount);") }}        
 
     }
 
@@ -1505,7 +1435,7 @@ contract ICO is TimedIco,
         address _beneficiary,
         uint256 _weiAmount
     ) internal {
-        individuallyCappedUpdatePurchasingState(_beneficiary, _weiAmount);      
+        super._updatePurchasingState(_beneficiary, _weiAmount);        
     }
 
     """)
@@ -1573,10 +1503,11 @@ contract ICO is TimedIco,
     }
 }
 
+{{ _if(is_minted_token, """ 
 
 contract MintedIco is ICO {
     constructor() public ICO() {
-
+      %payment_code%
     }
     
     /**
@@ -1591,3 +1522,5 @@ contract MintedIco is ICO {
         require(MintableToken(address(token)).mint(_beneficiary, _tokenAmount));
     }
 }
+""")}}
+

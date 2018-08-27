@@ -13,96 +13,16 @@ import "zeppelin-solidity/contracts/token/ERC20/ERC20.sol";
 import "zeppelin-solidity/contracts/payment/RefundEscrow.sol";
 
 
-contract CappedIco is CappedCrowdsale {
-    /**
-    * @dev Constructor, takes maximum amount of wei accepted in the crowdsale.
-    * @param _cap Max amount of wei to be contributed
-    */
-    constructor(uint256 _cap) public CappedCrowdsale(_cap) { 
-
-    }
-
-    /**
-    * @dev Extend parent behavior requiring purchase to respect the funding cap.
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function cappedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal {
-        require(weiRaised.add(_weiAmount) <= cap);
-    }
-}
-
-
-contract TimedIco is TimedCrowdsale {
-    constructor(uint256 _openingTime, uint256 _closingTime) public TimedCrowdsale(_openingTime, _closingTime) {
-
-    }
-
-    /**
-    * @dev Extend parent behavior requiring to be within contributing period
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function timedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal onlyWhileOpen {
-      
-    }
-
-}
-
-
-contract IndividuallyCappedIco is IndividuallyCappedCrowdsale {
-
-    /**
-    * @dev Extend parent behavior requiring purchase to respect the user's funding cap.
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function individuallyCappedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal {        
-        require(contributions[_beneficiary].add(_weiAmount) <= caps[_beneficiary]);
-    }
-
-    /**
-    * @dev Extend parent behavior to update user contributions
-    * @param _beneficiary Token purchaser
-    * @param _weiAmount Amount of wei contributed
-    */
-    function individuallyCappedUpdatePurchasingState(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) internal {
-        contributions[_beneficiary] = contributions[_beneficiary].add(_weiAmount);
-    }
-}
-
-
-contract WhitelistedIco is WhitelistedCrowdsale {
-    function whitelistedPreValidatePurchase(
-        address _beneficiary,
-        uint256 _weiAmount
-    ) view internal onlyIfWhitelisted(_beneficiary) {
-    }
-}
-
-
-/// @title ICO
-contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, FinalizableCrowdsale {
+// @title ICO
+contract ICO is WhitelistedCrowdsale, TimedCrowdsale, CappedCrowdsale, IndividuallyCappedCrowdsale, FinalizableCrowdsale {
 
     constructor(uint _rate, address _funds, address _token, uint _softcap,
         uint256 _openingTime,
         uint256 _closingTime,
         uint256 _cap) public
         Crowdsale(_rate, _funds, ERC20(_token)) 
-        CappedIco(_cap)
-        TimedIco(_openingTime, _closingTime) {
+        CappedCrowdsale(_cap)
+        TimedCrowdsale(_openingTime, _closingTime) {
         require(_softcap > 0);      
 
     
@@ -123,10 +43,8 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
     function _preValidatePurchase(
         address _beneficiary,
         uint256 _weiAmount)  internal {
-        whitelistedPreValidatePurchase(_beneficiary, _weiAmount);
-        individuallyCappedPreValidatePurchase(_beneficiary, _weiAmount); 
-        timedPreValidatePurchase(_beneficiary, _weiAmount); 
-        cappedPreValidatePurchase(_beneficiary, _weiAmount);
+
+        super._preValidatePurchase(_beneficiary, _weiAmount);
         minContributionPreValidatePurchase(_beneficiary, _weiAmount);
     }
 
@@ -134,7 +52,7 @@ contract ICO is WhitelistedIco, TimedIco, CappedIco, IndividuallyCappedIco, Fina
         address _beneficiary,
         uint256 _weiAmount
     ) internal {
-        individuallyCappedUpdatePurchasingState(_beneficiary, _weiAmount);      
+        super._updatePurchasingState(_beneficiary, _weiAmount);
     } 
 
     function finalization() internal {
@@ -207,7 +125,7 @@ contract MintedIco is ICO {
         uint256 _cap) public ICO(_rate, _funds, _token, _softcap, _openingTime, _closingTime, _cap) {
 
     }
-    
+
     /**
     * @dev Overrides delivery by minting tokens upon purchase.
     * @param _beneficiary Token purchaser
