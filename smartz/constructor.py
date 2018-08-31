@@ -50,68 +50,95 @@ class Constructor(ConstructorInstance):
         json_schema = {
             "type": "object",
             "required": [
-                "assertion"
+                "cap", "softcap", "start", "end", "token", "wallet",
             ],
-            "additionalProperties": True,
-
+            "additionalProperties": False,
             "properties": {
                 "cap": {
                     "title": "Hard cap",
-                    "description": "Maximum eth amount",
+                    "description": "Hard cap in ether",
                     "type": "number",
-                    "minumum": 0,
-                    "maximum": 1000000000000000000                    
+                    "minumum": 1,                    
+                    "maximum": 999999999999999999999999999999999,
+                    "default": 100               
                 },
                 "softcap": {
                     "title": "Soft cap",
-                    "description": "Maximum eth amount",
+                    "description": "Softcap in ether",
                     "type": "number",
                     "minumum": 0,
-                    "maximum": 1000000000000000000                    
+                    "maximum": 999999999999999999999999999999999,
+                    "default": 1
+                },
+                "min_contribution": {
+                    "title": "Minimal contribution",
+                    "description": "Minimal contribution per transaction in eth",
+                    "type": "number",
+                    "minumum": 0,
+                    "maximum": 9999999999999999999999999999999999,
+                    "default": 0.001                           
                 },
                 "start": {
-                    "title": "Start time",
-                    "description": "",
+                    "title": "Start date",
+                    "description": "ICO start date and time (UTC)",
                     "$ref": "#/definitions/unixTime",
                 },
                 "end": {
-                    "title": "End time",
-                    "description": "",
+                    "title": "End date",
+                    "description": "ICO end date and time (UTC)",
                     "$ref": "#/definitions/unixTime",
                 },
                 "wallet": {
                     "title": "Wallet address",
-                    "description": "",
+                    "description": "All collected funds will be transferred to this address",
                     "$ref": "#/definitions/address"
                 },
+                "token": {
+                    "title": "Token address",
+                    "description": "Token contract address",
+                    "$ref": "#/definitions/address"
+                },                
                 "rate": {
                     "title": "Rate",
-                    "description": "",
+                    "description": "Tokens to issue per 1 Ether",
                     "type": "number",
                     "minimum": 0,
-                    "maximum": 99999999999999999999,
-                },
-                "min_contribution": {
-                    "title": "Soft cap",
-                    "description": "Maximum eth amount",
-                    "type": "number",
-                    "minumum": 0,
-                    "maximum": 100000000000000000000,                             
+                    "maximum": 9999999999999999999999999999999999,
+                    "default": 1
+                },              
+              
+                "limited_contributor_list": {
+                    "title": "Limit list of contributors",
+                    "description": """Allow only specific contributors. 
+                        Whitelist - accept any contribution from whitelisted addresses. 
+                        Whitelist with hard cap per user - accept contribution for specific addresses with upper limit.
+                        No limits - all contributors allowed.
+                    """,
+                    "type": "string",
+                    "default": 'No limits',
+                    "enum": [
+                        'Whitelist', 'Whitelist with hard cap per user', 'No limits'
+                    ]
                 },
                 "need_burn": {
-                    "title": "Burn token after end",
-                    "description": "",
+                    "title": "Use burnable token",
+                    "description": "Burn non distributed tokens after ICO will be successfull completed",
                     "type": "boolean",
+                    "default": False
                 },
                 "mintable_token": {
-                    "title": "Is token mintable",
-                    "description": "",
+                    "title": "Use mintable token",
+                    "description": "Assume that token has mint method that allow ICO contract create tokens",
                     "type": "boolean",
-                }
+                    "default": False
+                },         
             }
         }
 
         ui_schema = {
+            "limited_contributor_list": {
+                "ui:widget": "radio",
+            },
             "start": {
                 "ui:widget": "unixTime",
             },
@@ -141,27 +168,33 @@ class Constructor(ConstructorInstance):
             context[f] = fields.get(f, default)
 
         zeroAddr = 'address(0)'
-
+        contrib_limits = fields.get('limited_contributor_list', 'No limits')
+        if contrib_limits == 'Whitelist':
+            fields['is_whitelisted'] = True
+        elif contrib_limits == 'Whitelist with hard cap per user':
+            fields['has_cap_per_person'] = True        
+            
         fill_context('is_whitelisted', False)
-        fill_context('cap', 0)
         fill_context('has_cap_per_person', False)
+        fill_context('cap', "0 ether")
+        
 
         fill_context('rate', 1)
         fill_context('wallet', zeroAddr)
         fill_context('token', zeroAddr)
-        fill_context('softcap', 0)
-        fill_context('min_contribution', 0)
+        fill_context('softcap', "1 ether")
+        fill_context('min_contribution', "0 ether")
         fill_context('need_burn', False)
         fill_context('start', 'now')
         fill_context('end', 'now + 86400*7')
-        fill_context('is_minted_token', False)
+        fill_context('mintable_token', False)
 
         template = base64.b64decode(self.__class__._TEMPLATE).decode('utf-8')
 
         return {
             "result": "success",
             'source': render_template(template, context),
-            'contract_name': "ICO" if not context['is_minted_token'] else "MintedIco"
+            'contract_name': "ICO" if not context['mintable_token'] else "MintedIco"
         }
 
     def post_construct(self, fields, abi_array):
@@ -203,7 +236,7 @@ class Constructor(ConstructorInstance):
 
         make_title("buyTokens", {
             "title": 'Buy tokens',
-            'decription': 'Buy tokens for specific address',
+            'description': 'Buy tokens for specific address',
             'inputs': [
                 {
                     'title': 'Address',

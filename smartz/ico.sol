@@ -835,7 +835,7 @@ contract StandardToken is ERC20, BasicToken {
 
 }
 
-{{ _if(is_minted_token, """ 
+{{ _if(mintable_token, """ 
 // File: zeppelin-solidity/contracts/token/ERC20/MintableToken.sol
 
 /**
@@ -894,7 +894,7 @@ contract MintableToken is StandardToken, Ownable {
 }
 
 """)}}
-
+{{ _if(mintable_token, """ 
 // File: zeppelin-solidity/contracts/crowdsale/emission/MintedCrowdsale.sol
 
 /**
@@ -919,6 +919,7 @@ contract MintedCrowdsale is Crowdsale {
     require(MintableToken(address(token)).mint(_beneficiary, _tokenAmount));
   }
 }
+""")}}
 
 // File: zeppelin-solidity/contracts/crowdsale/validation/IndividuallyCappedCrowdsale.sol
 
@@ -1293,72 +1294,6 @@ contract RefundEscrow is Ownable, ConditionalEscrow {
   }
 }
 
-// File: zeppelin-solidity/contracts/crowdsale/distribution/RefundableCrowdsale.sol
-
-/**
- * @title RefundableCrowdsale
- * @dev Extension of Crowdsale contract that adds a funding goal, and
- * the possibility of users getting a refund if goal is not met.
- */
-contract RefundableCrowdsale is FinalizableCrowdsale {
-  using SafeMath for uint256;
-
-  // minimum amount of funds to be raised in weis
-  uint256 public goal;
-
-  // refund escrow used to hold funds while crowdsale is running
-  RefundEscrow private escrow;
-
-  /**
-   * @dev Constructor, creates RefundEscrow.
-   * @param _goal Funding goal
-   */
-  constructor(uint256 _goal) public {
-    require(_goal > 0);
-    escrow = new RefundEscrow(wallet);
-    goal = _goal;
-  }
-
-  /**
-   * @dev Investors can claim refunds here if crowdsale is unsuccessful
-   */
-  function claimRefund() public {
-    require(isFinalized);
-    require(!goalReached());
-
-    escrow.withdraw(msg.sender);
-  }
-
-  /**
-   * @dev Checks whether funding goal was reached.
-   * @return Whether funding goal was reached
-   */
-  function goalReached() public view returns (bool) {
-    return weiRaised >= goal;
-  }
-
-  /**
-   * @dev escrow finalization task, called when owner calls finalize()
-   */
-  function finalization() internal {
-    if (goalReached()) {
-      escrow.close();
-      escrow.beneficiaryWithdraw();
-    } else {
-      escrow.enableRefunds();
-    }
-
-    super.finalization();
-  }
-
-  /**
-   * @dev Overrides Crowdsale fund forwarding, sending funds to escrow.
-   */
-  function _forwardFunds() internal {
-    escrow.deposit.value(msg.value)(msg.sender);
-  }
-
-}
 
 // File: zeppelin-solidity/contracts/token/ERC20/BurnableToken.sol
 
@@ -1402,12 +1337,11 @@ contract ICO is TimedCrowdsale,
                 FinalizableCrowdsale {
 
     constructor() public
-        Crowdsale({{ rate }}, {{ wallet }}, ERC20({{ token }})) 
+        Crowdsale({{ rate }}, address({{ wallet }}), ERC20(address({{ token }}))) 
         {{ _if(cap, "CappedCrowdsale(" + str(cap) + ")") }}
         TimedCrowdsale({{ start }}, {{ end }} ) {
-        require({{ softcap }} > 0);      
     
-        mEscrow = new RefundEscrow({{ wallet }});      
+        mEscrow = new RefundEscrow(address({{ wallet }}));      
 
         %payment_code%
 
@@ -1503,11 +1437,11 @@ contract ICO is TimedCrowdsale,
     }
 }
 
-{{ _if(is_minted_token, """ 
+{{ _if(mintable_token, """ 
 
 contract MintedIco is ICO {
     constructor() public ICO() {
-      %payment_code%
+       %payment_code%
     }
     
     /**
