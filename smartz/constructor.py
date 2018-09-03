@@ -199,9 +199,119 @@ class Constructor(ConstructorInstance):
 
     def post_construct(self, fields, abi_array):
         function_titles = {}
+        contrib_limits = fields.get('limited_contributor_list', 'No limits')
+        if contrib_limits == 'Whitelist':
+            fields['is_whitelisted'] = True
+        elif contrib_limits == 'Whitelist with hard cap per user':
+            fields['has_cap_per_person'] = True
+
         def make_title(title, obj):
             function_titles[title] = obj
+
+          
+
+        make_title('weiRaised', {
+            'title': 'Wei raised',
+            'description': 'Total amount of collected wei',
+            'sorting_order': 10
+        })
+
+        make_title('token', {
+            'title': 'Token address',
+            'description': '',
+            'sorting_order': 20
+        })
+        make_title('owner', {
+            'title': 'Contract owner',
+            'sorting_order': 30
+        })
+        
+        make_title('rate', {
+           'title': 'Wei to token conversion rate',
+            'description': 'How many token units a buyer gets per wei. The rate is the conversion between wei and the smallest and indivisible token unit.',
+            'sorting_order': 40
+        })
+
+        make_title('wallet', {
+            'title': 'Contributions target address',
+            'description': 'Address where contributions will be collected',
+            'sorting_order': 50
+        })
+
+
+        make_title('cap', {
+            'title': 'Hard cap',
+            'description': 'Max amount of wei to be contributed',
+            'sorting_order': 60
+        })
+        make_title('cSoftCap', {
+            'title': 'Soft cap',
+            'sorting_order': 70
+        })
+        make_title('openingTime', {
+            'title': 'Opening time',
+            'description': 'Crowdsale opening time',
+            'sorting_order': 80
+        })
+        make_title('closingTime', {
+            'title': 'Closing time',
+            'description': 'Crowdsale closing time',
+            'sorting_order': 300
+        })
+        
+        make_title("capReached", {
+            'title': 'Hard cap reached',
+            'description': 'Whether the hard cap was reached',
+            'sorting_order': 90
+        })
+        make_title('goalReached', {
+            'title': 'Soft cap reached',
+            'sorting_order': 100            
+        })        
+        
+        make_title('hasClosed', {
+            'title': 'Has closed', 
+            'description': 'Closing time has been reached',
+            'sorting_order': 101      
+        })
+
+        make_title('isFinalized', {
+            'title': 'Is finalized',
+            'description': 'Finalize method has been called'
+        })      
+     
+        make_title('mEscrow', {
+            'title': 'Escrow contract',
+            'description': 'Contract that return contribution if goal won\'t be reached',
+            'sorting_order': 110
+        })
+      
         if fields.get('is_whitelisted', False):
+            make_title('whitelist', {
+                'title': 'Address in whitelist',
+                'description': 'Determine if address is in whitelist',
+                'inputs': [
+                    {
+                        'title': 'Address'
+                    }
+                ],
+                'sorting_order': 301
+            })
+            make_title('checkRole',{
+                'title': 'Check role',
+                'description': 'Reverts if address does not have role',                
+                'sorting_order': 301,
+                'inputs': [
+                    {
+                        'title': 'Address',
+                        'description': 'Checked address'
+                    },
+                    {
+                        'title': 'Role',
+                        'description': 'Role name. For example - whitelist'
+                    }
+                ]
+            })
             make_title('addAddressToWhitelist', {
                 'title': 'Add address to whitelist',
                 'description': 'Only owner function.',
@@ -211,7 +321,7 @@ class Constructor(ConstructorInstance):
                             'description': 'Whitelisted address'
                         },
                 ],
-                'sorting_order': 300,
+                'sorting_order': 310,
                 'icon': {
                         'pack': 'materialdesignicons',
                         'name': 'text'
@@ -227,12 +337,35 @@ class Constructor(ConstructorInstance):
                             'description': 'Whitelisted addresses'
                         },
                 ],
-                'sorting_order': 300,
+                'sorting_order': 320,
                 'icon': {
                         'pack': 'materialdesignicons',
                         'name': 'text'
                 },
             })
+            make_title('removeAddressFromWhitelist',{
+                'title': 'Remove address from the whitelist',
+                'description': '',
+                'inputs': [
+                    {
+                        'title': 'Address'
+                    }
+                ],
+                'sorting_order': 330,
+            })
+            make_title('removeAddressesFromWhitelist',{
+                'title': 'Remove addresses from the whitelist',
+                'description': '',
+                'inputs': [
+                    {
+                        'title': 'Addresses'
+                    }
+                ],
+                'sorting_order': 340,
+            })
+          
+
+        
 
         make_title("buyTokens", {
             "title": 'Buy tokens',
@@ -242,35 +375,100 @@ class Constructor(ConstructorInstance):
                     'title': 'Address',
                     'description': ''
                 }
-            ]}           
-        )
-        # "cap()": "355274ea",
-        # "capReached()": "4f935945",
-        # "caps(address)": "66d97b21",
-        # "checkRole(address,string)": "0988ca8c",
-        # "closingTime()": "4b6753bc",
-        # "contributions(address)": "42e94c90",
-        # "finalize()": "4bb278f3",
-        # "getUserCap(address)": "8b58c64c",
-        # "getUserContribution(address)": "bb8b2b47",
-        # "hasClosed()": "1515bc2b",
-        # "hasRole(address,string)": "217fe6c6",
-        # "isFinalized()": "8d4e4083",
-        # "openingTime()": "b7a8807c",
-        # "owner()": "8da5cb5b",
-        # "rate()": "2c4e722e",
-        # "removeAddressFromWhitelist(address)": "286dd3f5",
-        # "removeAddressesFromWhitelist(address[])": "24953eaa",
-        # "renounceOwnership()": "715018a6",
-        # "setGroupCap(address[],uint256)": "a31f61fc",
-        # "setNextSale(address)": "52d63b7e",
-        # "setUserCap(address,uint256)": "c3143fe5",
-        # "token()": "fc0c546a",
-        # "transferOwnership(address)": "f2fde38b",
-        # "wallet()": "521eb273",
-        # "weiRaised()": "4042b66f",
-        # "whitelist(address)": "9b19251a"
+            ],
+            'sorting_order': 2000})  
 
+        make_title('finalize', {
+            'title': 'Finalize',
+            'description': 'Send funds on target address or return contributions if goal hasn\'t been reached. Can be called only once after ico has been closed',
+            'sorting_order': 1000,
+
+        })
+        make_title('claimRefund', {
+            'title': 'Refund',
+            'description': 'Investors can claim refunds here if crowdsale is unsuccessful',
+            'sorting_order': 1010,
+        })
+        make_title('renounceOwnership', {
+            'title': 'Renounce ownership',
+            'description': 'Allows the current owner to relinquish control of the contract.',
+            'sorting_order': 1030,
+        })
+        make_title('transferOwnership', {
+            'title': 'Transfer ownership',
+            'description': 'Allows the current owner to transfer control of the contract to a new owner.',
+            'inputs': [
+                {
+                    'title': 'New owner',
+                    'description': 'The address to transfer ownership to.'
+                }
+            ],
+             'sorting_order': 1040,
+        })
+
+        if fields.get('has_cap_per_person', False):
+            make_title('caps', {
+                'title': 'Per user caps',
+                'description': '',
+                'sorting_order': 200,
+
+            })
+            make_title('contributions', {
+                'title': 'Per user contributions',
+                'description': '',
+                'sorting_order': 201,
+
+            })
+
+            make_title('getUserCap', {
+                'title': 'User cap',
+                'description': 'The cap of a specific user',               
+                'sorting_order': 202,                
+                'inputs': [
+                    {
+                        'title': 'Address'
+                    }
+                ]
+            })
+
+            make_title('setUserCap', {
+                'title': 'Set user cap',
+                'description': 'The cap of a specific user',                
+                'sorting_order': 203,
+
+                'inputs': [
+                    {
+                        'title': 'Address'
+                    },
+                    {
+                        'title': 'Cap in wei'
+                    }
+                ]
+            })
+            make_title('setGroupCap', {
+                'title': 'Set group cap',
+                'description': 'The cap of a group of users',
+                  'sorting_order': 204,
+                'inputs': [
+                    {
+                        'title': 'Addresses'
+                    },
+                    {
+                        'title': 'Cap in wei'
+                    }
+                ]
+
+            })
+            make_title('getUserContribution', {
+                'title': 'User contribution',
+                'description': 'The amount contributed so far by a sepecific user',
+                'sorting_order': 205,
+                'inputs': [
+                    {
+                        'title': 'Address'
+                    }
+                ]
+            })
        
         return {
             "result": "success",
