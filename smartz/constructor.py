@@ -473,7 +473,7 @@ class Constructor(ConstructorInstance):
         return {
             "result": "success",
             'function_specs': function_titles,
-            'dashboard_functions': ['buyTokens']
+            'dashboard_functions': ['weiRaised', 'goalReached']
         }
 
 
