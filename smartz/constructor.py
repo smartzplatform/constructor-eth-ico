@@ -9,6 +9,11 @@ def _if(var, default=""):
     
     return ""
 
+def _for(l, f):
+    ret = ""
+    for e in l:
+        ret = ret + f(e) + "\n"
+    return ret
     
     
 
@@ -18,6 +23,7 @@ def render_template(tmpl, fields):
 
     context = dict(fields)
     context["_if"] = _if
+    context["_for"] = _for
 
 
     exp = re.compile(r"\{\{(.*?)\}\}",  re.MULTILINE | re.DOTALL)
@@ -105,8 +111,28 @@ class Constructor(ConstructorInstance):
                     "minimum": 0,
                     "maximum": 9999999999999999999999999999999999,
                     "default": 1
-                },              
-              
+                },    
+                "discount_mapping": {
+                    "title": "Discount token prices for dates",
+                    "description": "Different token rates for each sale period.",
+                    "type": "array",
+                    "items": 
+                        {   
+                            "type": "array",
+                            "minItems": 2,
+                            "maxItems": 2,
+                            "items": [
+                                {
+                                    "title": "Until date",
+                                    "$ref": "#/definitions/unixTime"
+                                },
+                                {
+                                    "title": "Rate",
+                                    "$ref": "#/definitions/uint256"
+                                }
+                            ]
+                        }                    
+                },      
                 "limited_contributor_list": {
                     "title": "Limit list of contributors",
                     "description": """Allow only specific contributors. 
@@ -120,6 +146,7 @@ class Constructor(ConstructorInstance):
                         'Whitelist', 'Whitelist with hard cap per user', 'No limits'
                     ]
                 },
+                
                 "need_burn": {
                     "title": "Use burnable token",
                     "description": "Burn non distributed tokens after ICO will be successfull completed",
@@ -164,8 +191,11 @@ class Constructor(ConstructorInstance):
 
     def construct(self, fields):  
         context = {}     
-        def fill_context(f, default):
-            context[f] = fields.get(f, default)
+        def fill_context(f, default, m=lambda e: e):
+            if f in fields:
+                context[f] = m(fields.get(f))
+            else:
+                context[f] = default
 
         zeroAddr = 'address(0)'
         contrib_limits = fields.get('limited_contributor_list', 'No limits')
@@ -176,18 +206,22 @@ class Constructor(ConstructorInstance):
             
         fill_context('is_whitelisted', False)
         fill_context('has_cap_per_person', False)
-        fill_context('cap', "0 ether")
+        
+        fill_context('cap', "0 ether", int)
         
 
         fill_context('rate', 1)
         fill_context('wallet', zeroAddr)
         fill_context('token', zeroAddr)
-        fill_context('softcap', "1 ether")
-        fill_context('min_contribution', "0 ether")
+        fill_context('softcap', "1 ether", int)
+        fill_context('min_contribution', "0 ether", int)
         fill_context('need_burn', False)
         fill_context('start', 'now')
         fill_context('end', 'now + 86400*7')
         fill_context('mintable_token', False)
+
+        context['discount_dates'] = map(lambda e: e[0], fields.get('discount_mapping', []))
+        context['discount_rates'] = map(lambda e: e[1], fields.get('discount_mapping', []))
 
         template = base64.b64decode(self.__class__._TEMPLATE).decode('utf-8')
 

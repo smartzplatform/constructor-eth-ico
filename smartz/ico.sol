@@ -1341,7 +1341,15 @@ contract ICO is TimedCrowdsale,
         {{ _if(cap, "CappedCrowdsale(" + str(cap) + ")") }}
         TimedCrowdsale({{ start }}, {{ end }} ) {
     
-        mEscrow = new RefundEscrow(address({{ wallet }}));      
+        mEscrow = new RefundEscrow(address({{ wallet }})); 
+        {{ _for(discount_rates, lambda el: "_tokenRates.push(%s);" % (el)) }}
+
+        _tokenRates.push({{ rate }});
+
+        _rateChangeDates.push({{ start }});
+
+        {{ _for(discount_dates, lambda el: "_rateChangeDates.push(%s);" % (el)) }}
+     
 
         %payment_code%
 
@@ -1435,6 +1443,53 @@ contract ICO is TimedCrowdsale,
     function _forwardFunds() internal {
         mEscrow.deposit.value(msg.value)(msg.sender);
     }
+
+       /**
+   * @dev Override to extend the way in which ether is converted to tokens.
+   * @param _weiAmount Value in wei to be converted into tokens
+   * @return Number of tokens that can be purchased with the specified _weiAmount
+   */
+   
+    function _getTokenAmount(uint256 _weiAmount)
+        internal view returns (uint256)
+    {
+
+        return _weiAmount.mul(getRate());
+    }
+
+    function getRate() public onlyWhileOpen view returns (uint256) {
+        
+        uint256 first = 0;
+        uint256 last = _rateChangeDates.length - 1;
+        uint256 i = 0;       
+        
+        while(first <= last) {            
+            
+            i = (last + first) / 2;        
+            
+         
+            if (_rateChangeDates[i] > block.timestamp) {
+                last = i - 1;
+            } 
+            if (_rateChangeDates[i] <= block.timestamp) {
+                first = i + 1;
+            }          
+
+        }
+        if (_rateChangeDates[i] > block.timestamp && i > 0) {
+           i = i - 1;
+        } 
+
+        
+        return _tokenRates[i];
+        
+    }
+
+    /// @notice periods with token discount rate
+    uint256[] public _rateChangeDates;
+
+    /// @notice token rate per sale period
+    uint256[] public _tokenRates;
 }
 
 {{ _if(mintable_token, """ 
