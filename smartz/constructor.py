@@ -261,10 +261,16 @@ class Constructor(ConstructorInstance):
         })
         
         make_title('rate', {
-           'title': 'Wei to token conversion rate',
+           'title': 'Base wei to token conversion rate',
             'description': 'How many token units a buyer gets per wei. The rate is the conversion between wei and the smallest and indivisible token unit.',
             'sorting_order': 40
         })
+
+        make_title('getRate', {
+            'title': 'Current wei to token conversion rate',
+            'description': 'Token rate with possible discount.'
+        })
+
 
         make_title('wallet', {
             'title': 'Contributions target address',
@@ -400,7 +406,7 @@ class Constructor(ConstructorInstance):
           
 
         
-
+        
         make_title("buyTokens", {
             "title": 'Buy tokens',
             'description': 'Buy tokens for specific address',
@@ -410,7 +416,19 @@ class Constructor(ConstructorInstance):
                     'description': ''
                 }
             ],
-            'sorting_order': 2000})  
+            'sorting_order': 2000})
+              
+        make_title('_rateChangeDates', {
+            'title': 'Discount dates',
+            'description': 'Dates thresholds for each discount price',
+            'sorting_order': 1001
+        })
+
+        make_title('_tokenRates', {
+            'title': 'Discount rates',
+            'description': 'Token rate for each discount period',
+            'sorting_order': 1002
+        })
 
         make_title('finalize', {
             'title': 'Finalize',

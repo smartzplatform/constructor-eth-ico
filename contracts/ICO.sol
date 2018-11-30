@@ -43,6 +43,12 @@ contract ICO is WhitelistedCrowdsale, TimedCrowdsale, CappedCrowdsale, Individua
 
     uint constant  MIN_CONTRIBUTION = 0;
 
+       /// @notice periods with token discount rate
+    uint256[] public _rateChangeDates;
+
+    /// @notice token rate per sale period
+    uint256[] public _tokenRate;
+
 
     function _preValidatePurchase(
         address _beneficiary,
@@ -112,26 +118,6 @@ contract ICO is WhitelistedCrowdsale, TimedCrowdsale, CappedCrowdsale, Individua
     function goalReached() public view returns (bool) {
         return weiRaised >= cSoftCap;
     }
-   
-  /**
-   * @dev Overrides Crowdsale fund forwarding, sending funds to escrow.
-   */
-    function _forwardFunds() internal {
-        mEscrow.deposit.value(msg.value)(msg.sender);
-    }
-
-    /**
-   * @dev Override to extend the way in which ether is converted to tokens.
-   * @param _weiAmount Value in wei to be converted into tokens
-   * @return Number of tokens that can be purchased with the specified _weiAmount
-   */
-   
-    function _getTokenAmount(uint256 _weiAmount)
-        internal view returns (uint256)
-    {
-
-        return _weiAmount.mul(getRate());
-    }
 
     function getRate() public onlyWhileOpen view returns (uint256)  {
         
@@ -140,7 +126,7 @@ contract ICO is WhitelistedCrowdsale, TimedCrowdsale, CappedCrowdsale, Individua
         uint256 i = 0;       
 
 
-        while(first <= last) {            
+        while (first <= last) {            
             
             i = (last + first) / 2;        
             
@@ -154,18 +140,35 @@ contract ICO is WhitelistedCrowdsale, TimedCrowdsale, CappedCrowdsale, Individua
 
         }
         if (_rateChangeDates[i] > block.timestamp && i > 0) {
-           i = i - 1;
+            i = i - 1;
         }         
        
         return _tokenRate[i];
         
     }
+   
+  /**
+   * @dev Overrides Crowdsale fund forwarding, sending funds to escrow.
+   */
+    function _forwardFunds() internal {
+        mEscrow.deposit.value(msg.value)(msg.sender);
+    }
 
-    /// @notice periods with token discount rate
-    uint256[] public _rateChangeDates;
+    /**
+   * @dev Override to extend the way in which ether is converted to tokens.
+   * @param _weiAmount Value in wei to be converted into tokens
+   * @return Number of tokens that can be purchased with the specified _weiAmount
+   */
+    function _getTokenAmount(uint256 _weiAmount)
+        internal view returns (uint256)
+    {
 
-    /// @notice token rate per sale period
-    uint256[] public _tokenRate;
+        return _weiAmount.mul(getRate());
+    }
+
+   
+
+ 
 }
 
 
